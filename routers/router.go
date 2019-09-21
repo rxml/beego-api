@@ -97,6 +97,7 @@ func init() {
 		beego.NewNamespace("/api/auth",
 			beego.NSBefore(authFilter),
 			beego.NSRouter("/users", &controllers.UserController{}, "*:Users"),
+			beego.NSRouter("/avatar", &controllers.UserController{}, "post:Avatar"),
 		)
 	
 	beego.AddNamespace(public,auth)

@@ -1,8 +1,12 @@
 package controllers
 
 import (
+	"fmt"
 	"github.com/astaxie/beego"
 	"apigo/models"
+	"path/filepath"
+	"os"
+	"time"
 )
 // Operations about Users
 type UserController struct {
@@ -135,3 +139,71 @@ func (this *UserController) Users() {
 	this.ServeJSON()
 }
 
+
+/*
+* @author molin
+* @date 2019-09-21
+* @上传头像
+*/
+func (this *UserController) Avatar() {
+	f, h, err := this.GetFile("file")
+	defer f.Close()
+	var code int64
+	var message string
+	fmt.Println(h)
+    if err == nil {
+		filesuffix := filepath.Ext(h.Filename)
+		fmt.Println(filesuffix)
+		if filesuffix == ".jpg" || filesuffix == ".png" || filesuffix == "jpeg" || filesuffix == ".gif" {
+			if fileSizer, ok := f.(Size); ok {
+				fileSize := fileSizer.Size()
+				// fmt.Printf("上传%v文件的大小为: %v", fileSize, h.Filename)
+				if fileSize > int64(Filebytes) {
+					code = 0
+					message = "获取上传文件错误:文件大小超出33M"
+					goto END
+				}
+			} else {
+				code = 0
+				message = "获取上传文件错误:无法读取文件大小"
+				goto END
+			}
+			
+			dirpath := "static/upload/avatar"
+			_, err := os.Stat(dirpath)
+			if err != nil {
+				//文件夹不存在  则创建文件夹
+				err = os.MkdirAll(dirpath, os.ModePerm)
+				if err != nil {
+					code  = 0
+					message = "创建文件夹失败"
+					goto END
+                }
+			}
+
+			//新建文件名
+			timeStamp := time.Now().Unix()
+			fileName := fmt.Sprintf("%d-%s", timeStamp, h.Filename)
+			
+			err = this.SaveToFile("file", filepath.Join(dirpath, fileName)) // 保存位置在 static/upload, 没有文件夹要先创建
+			if err == nil {
+				code = 1
+				message = "上传成功"
+			} else {
+				code = 0
+				message = "上传失败"
+			}
+		} else {
+			code = 0
+			message = "不支持上传该文件类型"
+		}
+		
+	} else {
+		code = 0
+		message = "没有发现上传文件"
+	}
+	END:
+	response :=  map[string]interface{}{"code": code, "message": message}
+	this.Data["json"] = &response
+	this.ServeJSON()
+}
